@@ -1,5 +1,6 @@
 from src.models import Apartment, Bill, Parameters, Tenant, TenantSettlement, Transfer, ApartmentSettlement
 from typing import List, Tuple
+from decimal import Decimal, ROUND_HALF_UP
 
 class Manager:
     def __init__(self, parameters: Parameters):
@@ -70,5 +71,16 @@ class Manager:
                 total_due_pln=apartment_settlement.total_due_pln / len(tenants_in_apartment)
             )
         for tenant in tenants_in_apartment ] 
-    
+
+    def get_tax(self, year: int, month: int, tax_rate: float) -> int:
+        if not 1 <= month <= 12:
+            raise ValueError("Month must be between 1 and 12")
+
+        income = Decimal("0")
+        for transfer in self.transfers:
+            if transfer.settlement_year == year and transfer.settlement_month == month:
+                income += Decimal(str(transfer.amount_pln))
+
+        tax = income * Decimal(str(tax_rate))
+        return int(tax.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
     

@@ -1,6 +1,6 @@
 from src.manager import Manager
 from src.models import Parameters
-
+import sys
 
 def print_section_header(title: str):
     """Print a formatted section header"""
@@ -63,11 +63,43 @@ def display_tenants(manager):
                 print(f"      • {format_currency(transfer.amount_pln):>15}  Date: {transfer.date}  Period: {month_year}")
 
 
-if __name__ == '__main__':
-    parameters = Parameters()
-    manager = Manager(parameters)
+def main() -> int:
+    args = sys.argv[1:]
+    if not args:
+        manager = Manager(Parameters())
+        display_apartments(manager)
+        display_tenants(manager)
+        print(f"\n{'=' * 70}\n")
+        return 0
 
-    display_apartments(manager)
-    display_tenants(manager)
-    
-    print(f"\n{'=' * 70}\n")
+    if len(args) != 3:
+        print("Usage: python main.py APARTMENT_KEY YEAR MONTH", file=sys.stderr)
+        return 2
+
+    apartment_key, year_arg, month_arg = args
+    try:
+        year = int(year_arg)
+        month = int(month_arg)
+    except ValueError:
+        print("Year and month must be integers.", file=sys.stderr)
+        return 2
+
+    if not 1 <= month <= 12:
+        print("Month must be between 1 and 12.", file=sys.stderr)
+        return 2
+
+    manager = Manager(Parameters())
+    settlement = manager.get_settlement(apartment_key, year, month)
+    if settlement is None:
+        print(f"Unknown apartment: {apartment_key}", file=sys.stderr)
+        return 1
+
+    print_section_header(f"SETTLEMENT {apartment_key} {year}-{month:02d}")
+    print(f"Apartment costs: {format_currency(settlement.total_due_pln)}")
+    for tenant in manager.create_tenants_settlements(settlement) or []:
+        print(f"{tenant.tenant}: {format_currency(tenant.total_due_pln)}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
